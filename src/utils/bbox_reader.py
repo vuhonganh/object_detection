@@ -1,5 +1,7 @@
 import xml.etree.ElementTree as ET
-
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from scipy.misc import imread, imresize, imsave, imshow
 
 def get_int(name, root, box_idx=0):
     cur_idx = 0
@@ -51,4 +53,17 @@ def process_xml_annotation(xml_file):
         print(bb)
     return bbs
 
-bbs = process_xml_annotation('../../n02870526_14674.xml')
+
+def visualize_bbox(file_img, file_xml):
+    bbs = process_xml_annotation(file_xml)
+    img = imread(file_img)
+    fig, ax = plt.subplots()
+    ax.imshow(img)
+    for i in range(len(bbs)):
+        xmin = bbs[i][0]
+        ymin = bbs[i][1]
+        xmax = bbs[i][2]
+        ymax = bbs[i][3]
+        rect = patches.Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='r', facecolor='none')
+        ax.add_patch(rect)
+    plt.show()
