@@ -10,7 +10,7 @@ fi
 
 if [ ! -f "$FILE_PATH" ]
 then
-    wget -O ${FILE_PATH} https://www.dropbox.com/s/mi0e17x5ubng1mn/imagenet.zip?dl=0
+    wget -O ${FILE_PATH} https://www.dropbox.com/s/l0yyckqnqqbrow7/imagenet.tar.gz?dl=0
 fi
 
 tar -xzf $FILE_PATH -C $DATA_PATH
