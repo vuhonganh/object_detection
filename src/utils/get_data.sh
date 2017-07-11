@@ -1,4 +1,5 @@
 #!/bin/sh
+# get raw data (user should not run this file)
 DATA_PATH=/vol/bitbucket/hav16/imagenet
 FILE_PATH=${DATA_PATH}/imagenet.tar.gz
 if [ ! -d "$DATA_PATH" ]
