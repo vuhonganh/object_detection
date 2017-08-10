@@ -11,7 +11,8 @@ import os
 
 set_other_idx = set()
 
-def get_int(name, root, box_idx=0):
+def _get_int(name, root, box_idx=0):
+    """ find item with that name in the box with that box_idx then return its value in int"""
     cur_idx = 0
     for item in root.iter(name):
         if cur_idx == box_idx:
@@ -21,10 +22,10 @@ def get_int(name, root, box_idx=0):
     return -1
 
 
-def get_number_bbox(root):
+def _get_number_bbox(root):
     nb_box = 0
     while True:
-        if get_int('xmin', root, nb_box) == -1:
+        if _get_int('xmin', root, nb_box) == -1:
             break
         nb_box += 1
     return nb_box
@@ -36,11 +37,12 @@ def box_is_valid(xmin, ymin, xmax, ymax, width, height):
     return False
 
 
-def process_xml_annotation(xml_file, list_object_name):
+def process_xml_annotation(xml_file, list_object_name=None):
     """Find all bbox that contains the object by matching object_name. 
     Note that an annotation folder can contain xml files of different folder name
     and multiple objects    
     Return empty string if bbox is invalid and/or does not contain any object in list_object_name
+    if list_object_name is None, return a string containing all valid boxes
     """
     tree = ET.parse(xml_file)
     root = tree.getroot()
@@ -55,7 +57,7 @@ def process_xml_annotation(xml_file, list_object_name):
 
     for ob in root.findall('object'):
         cur_obj = ob.find('name').text
-        if cur_obj in list_object_name:
+        if list_object_name is None or cur_obj in list_object_name:
             bb = ob.find('bndbox')
             xmin = int(float(bb.find('xmin').text))
             ymin = int(float(bb.find('ymin').text))
@@ -63,41 +65,52 @@ def process_xml_annotation(xml_file, list_object_name):
             ymax = int(float(bb.find('ymax').text))
             if box_is_valid(xmin, ymin, xmax, ymax, img_width, img_height):
                 bbs.append([xmin, ymin, xmax, ymax])
-                string_res += ',%s,%d,%d,%d,%d' % (cur_obj, xmin, ymin, xmax, ymax)
-                if folder_name not in list_object_name:
+                string_res += '%s,%d,%d,%d,%d,%s\n' % (img_file_name, xmin, ymin, xmax, ymax, cur_obj)
+                if list_object_name is not None and folder_name not in list_object_name:
                     set_other_idx.add(folder_name)
-    if string_res != '':
-        string_res = '%s,%d,%d' % (img_file_name, int(img_width), int(img_height)) + string_res
     return string_res
 
 
 def string_to_bbox(string_info):
-    """string_info has syntax: file_name, img_width, img_height, object1_name, xmin1, ymin1, xmax1, ymax1, 
-    object2_name, xmin2, ymin2, xmax2, ymax2, etc."""
-    list_info = string_info.split(',')
-    print(list_info)
+    """string_info has syntax: file_name, xmin1, ymin1, xmax1, ymax1,  object1_name\n 
+    file_name, xmin2, ymin2, xmax2, ymax2, object2_name\n... etc."""
+    list_line = string_info.split('\n')
     bbs = []
-    start_idx = 3
-    while start_idx < len(list_info):
-        xmin = int(list_info[start_idx + 1])
-        ymin = int(list_info[start_idx + 2])
-        xmax = int(list_info[start_idx + 3])
-        ymax = int(list_info[start_idx + 4])
-        bbs.append([xmin, ymin, xmax, ymax])
-        start_idx += 5
+    for line in list_line:
+        if line == '':
+            continue
+        list_info = line.split(',')
+
+        xmin = int(list_info[1])
+        ymin = int(list_info[2])
+        xmax = int(list_info[3])
+        ymax = int(list_info[4])
+        obj_name = list_info[5]
+        bbs.append([xmin, ymin, xmax, ymax, obj_name])
     return bbs
 
 
-def process_folder_xml(folder_path, list_object_names):
+def process_folder_xml(folder_path, list_object_names=None):
     xml_files = [f for f in os.listdir(folder_path) if f.endswith('.xml')]
-    with open('img_bbox.txt', mode='a') as f:
+    with open('img_bbox.txt', mode='w') as f:
         for xml_f in xml_files:
             string_info = process_xml_annotation(folder_path + '/' + xml_f, list_object_names)
             if string_info != '':
-                f.write(string_info + '\n')
+                f.write(string_info)
 
 
-def visualize_bbox(file_img, file_xml, list_object_name):
+def test_write_file():
+    folder_path = '../../samples'
+    list_object_names = None
+    xml_files = [f for f in os.listdir(folder_path) if f.endswith('.xml')]
+    with open('test_img_bbox.txt', mode='w') as f:
+        for xml_f in xml_files:
+            string_info = process_xml_annotation(folder_path + '/' + xml_f, list_object_names)
+            if string_info != '':
+                f.write(string_info)
+
+
+def visualize_bbox(file_img, file_xml, list_object_name=None):
     bbs = string_to_bbox(process_xml_annotation(file_xml, list_object_name))
     img = imread(file_img)
     fig, ax = plt.subplots()
@@ -107,18 +120,23 @@ def visualize_bbox(file_img, file_xml, list_object_name):
         ymin = bbs[i][1]
         xmax = bbs[i][2]
         ymax = bbs[i][3]
+        obj_name = bbs[i][4]
         rect = patches.Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='r', facecolor='none')
         ax.add_patch(rect)
+        ax.text(xmin + 3, ymin, obj_name, bbox=dict(facecolor='yellow', alpha=0.6))
     plt.show()
 
 
 def bbox_vis_example():
-    # file_img = '../../n02870526_10384.JPEG'
-    # file_xml = '../../n02870526_10384.xml'
-    file_img = '../../n07739125_12.JPEG'
-    file_xml = '../../n07739125_12.xml'
-    list_object_name = ('n02870526', 'n07739125')
-    visualize_bbox(file_img, file_xml, list_object_name)
+    # file_img = '../../samples/n02870526_10384.JPEG'
+    # file_xml = '../../samples/n02870526_10384.xml'
+    # file_img = '../../samples/n07739125_12.JPEG'
+    # file_xml = '../../samples/n07739125_12.xml'
+    file_img = '../../samples/n02773037_9927.JPEG'
+    file_xml = '../../samples/n02773037_9927.xml'
+
+    # list_object_name = ('n02870526', 'n07739125')
+    visualize_bbox(file_img, file_xml)
 
 
 def generate_img_bbox(list_object_names):
@@ -181,7 +199,8 @@ def get_list_obj_names():
 if __name__ == '__main__':
     path_to_imgs = '/vol/bitbucket/hav16/imagenet'
     list_img = get_list_img()
+    bbox_vis_example()
     # remove_no_bbox_imgs(list_img, path_to_imgs)
     # find_lacking_imgs(list_img, path_to_imgs)
     # write_clean_img_bbox()
-
+    test_write_file()
