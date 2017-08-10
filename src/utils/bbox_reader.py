@@ -37,7 +37,7 @@ def box_is_valid(xmin, ymin, xmax, ymax, width, height):
     return False
 
 
-def process_xml_annotation(xml_file, list_object_name=None):
+def process_xml_annotation(xml_file, list_object_name):
     """Find all bbox that contains the object by matching object_name. 
     Note that an annotation folder can contain xml files of different folder name
     and multiple objects    
@@ -90,9 +90,12 @@ def string_to_bbox(string_info):
     return bbs
 
 
-def process_folder_xml(folder_path, list_object_names=None):
+def process_folder_xml(folder_path, dest_file, list_object_names):
+    """extract bbox info from all xml files in the folder_path and write to dest_file.
+    If list_object_names is provided (i.e. not None) then only bboxes containing one of those objects are extracted.
+    bbox info has format: img_file_name,xmin,ymin,xmax,ymax,object_name"""
     xml_files = [f for f in os.listdir(folder_path) if f.endswith('.xml')]
-    with open('img_bbox.txt', mode='w') as f:
+    with open(dest_file, mode='w') as f:
         for xml_f in xml_files:
             string_info = process_xml_annotation(folder_path + '/' + xml_f, list_object_names)
             if string_info != '':
@@ -139,10 +142,16 @@ def bbox_vis_example():
     visualize_bbox(file_img, file_xml)
 
 
-def generate_img_bbox(list_object_names):
-    dir_path = '/vol/bitbucket/hav16/imagenet/Annotation/'
-    for d in os.listdir(dir_path):
-        process_folder_xml(dir_path + d, list_object_names)
+def generate_img_bbox(annotation_path='/data/hav16/imagenet/Annotation/', dest_file='all_bbox.txt', list_object_names=None):
+    with open(dest_file, mode='w') as res_file:
+        for d in os.listdir(annotation_path):
+            folder_path = annotation_path + '/' + d
+            xml_files = [f for f in os.listdir(folder_path) if f.endswith('.xml')]
+            for xml_f in xml_files:
+                string_info = process_xml_annotation(folder_path + '/' + xml_f, list_object_names)
+                if string_info != '':
+                    res_file.write(string_info)
+
     print(set_other_idx)
 
 
@@ -176,6 +185,7 @@ def find_lacking_imgs(list_img, path_to_imgs):
     print("lacking %d images" % cnt)
     return lacking_imgs
 
+
 def write_clean_img_bbox(file_img_bbox='img_bbox.txt'):
     lacking_imgs = find_lacking_imgs(get_list_img(file_img_bbox), '/vol/bitbucket/hav16/imagenet')
     with open('clean_img_bbox.txt', mode='w') as clean_file:
@@ -197,10 +207,9 @@ def get_list_obj_names():
     return list_obj_names
 
 if __name__ == '__main__':
-    path_to_imgs = '/vol/bitbucket/hav16/imagenet'
-    list_img = get_list_img()
-    bbox_vis_example()
+    # bbox_vis_example()
+    generate_img_bbox(list_object_names=get_list_obj_names())
     # remove_no_bbox_imgs(list_img, path_to_imgs)
     # find_lacking_imgs(list_img, path_to_imgs)
     # write_clean_img_bbox()
-    test_write_file()
+    # test_write_file()
