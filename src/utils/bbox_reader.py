@@ -3,9 +3,6 @@ This file helps to preprocess images from imagenet with bounding box
 """
 
 import xml.etree.ElementTree as ET
-# import matplotlib.pyplot as plt
-# import matplotlib.patches as patches
-# from scipy.misc import imread, imresize, imsave, imshow
 import os
 
 
@@ -37,12 +34,13 @@ def box_is_valid(xmin, ymin, xmax, ymax, width, height):
     return False
 
 
-def process_xml_annotation(xml_file, list_object_name):
+def process_xml_annotation(xml_file, class_name_dict):
     """Find all bbox that contains the object by matching object_name. 
     Note that an annotation folder can contain xml files of different folder name
     and multiple objects    
-    Return empty string if bbox is invalid and/or does not contain any object in list_object_name
-    if list_object_name is None, return a string containing all valid boxes
+    Return empty string if bbox is invalid and/or does not contain any object in class_name_dict
+    if class_name_dict is None, return a string containing all valid boxes
+    class_name_dict[wnid] -> english name of that wnid
     """
     tree = ET.parse(xml_file)
     root = tree.getroot()
@@ -57,7 +55,7 @@ def process_xml_annotation(xml_file, list_object_name):
 
     for ob in root.findall('object'):
         cur_obj = ob.find('name').text
-        if list_object_name is None or cur_obj in list_object_name:
+        if len(class_name_dict) == 0 or cur_obj in class_name_dict:
             bb = ob.find('bndbox')
             xmin = int(float(bb.find('xmin').text))
             ymin = int(float(bb.find('ymin').text))
@@ -65,90 +63,45 @@ def process_xml_annotation(xml_file, list_object_name):
             ymax = int(float(bb.find('ymax').text))
             if box_is_valid(xmin, ymin, xmax, ymax, img_width, img_height):
                 bbs.append([xmin, ymin, xmax, ymax])
-                string_res += '%s,%d,%d,%d,%d,%s\n' % (img_file_name, xmin, ymin, xmax, ymax, cur_obj)
-                if list_object_name is not None and folder_name not in list_object_name:
+                if cur_obj in class_name_dict:
+                    cur_obj = class_name_dict[cur_obj]  # change wnid to english name
+                string_res += '%s,%d,%d,%d,%d,%d,%d,%s\n' % (img_file_name, img_width, img_height, xmin, ymin, xmax, ymax, cur_obj)
+                if len(class_name_dict) > 0 and folder_name not in class_name_dict:
                     set_other_idx.add(folder_name)
     return string_res
 
 
-def string_to_bbox(string_info):
-    """string_info has syntax: file_name, xmin1, ymin1, xmax1, ymax1,  object1_name\n 
-    file_name, xmin2, ymin2, xmax2, ymax2, object2_name\n... etc."""
-    list_line = string_info.split('\n')
-    bbs = []
-    for line in list_line:
-        if line == '':
-            continue
-        list_info = line.split(',')
-
-        xmin = int(list_info[1])
-        ymin = int(list_info[2])
-        xmax = int(list_info[3])
-        ymax = int(list_info[4])
-        obj_name = list_info[5]
-        bbs.append([xmin, ymin, xmax, ymax, obj_name])
-    return bbs
-
-
-def process_folder_xml(folder_path, dest_file, list_object_names):
+def process_folder_xml(folder_path, dest_file, class_name_dict):
     """extract bbox info from all xml files in the folder_path and write to dest_file.
     If list_object_names is provided (i.e. not None) then only bboxes containing one of those objects are extracted.
-    bbox info has format: img_file_name,xmin,ymin,xmax,ymax,object_name"""
+    bbox info has format: img_file_name,im_width,im_height,xmin,ymin,xmax,ymax,object_name"""
     xml_files = [f for f in os.listdir(folder_path) if f.endswith('.xml')]
     with open(dest_file, mode='w') as f:
         for xml_f in xml_files:
-            string_info = process_xml_annotation(folder_path + '/' + xml_f, list_object_names)
+            string_info = process_xml_annotation(folder_path + '/' + xml_f, class_name_dict)
             if string_info != '':
                 f.write(string_info)
 
 
 def test_write_file():
     folder_path = '../../samples'
-    list_object_names = None
+    class_name_dict = {}
     xml_files = [f for f in os.listdir(folder_path) if f.endswith('.xml')]
     with open('test_img_bbox.txt', mode='w') as f:
         for xml_f in xml_files:
-            string_info = process_xml_annotation(folder_path + '/' + xml_f, list_object_names)
+            string_info = process_xml_annotation(folder_path + '/' + xml_f, class_name_dict)
             if string_info != '':
                 f.write(string_info)
 
 
-# def visualize_bbox(file_img, file_xml, list_object_name=None):
-#     bbs = string_to_bbox(process_xml_annotation(file_xml, list_object_name))
-#     img = imread(file_img)
-#     fig, ax = plt.subplots()
-#     ax.imshow(img)
-#     for i in range(len(bbs)):
-#         xmin = bbs[i][0]
-#         ymin = bbs[i][1]
-#         xmax = bbs[i][2]
-#         ymax = bbs[i][3]
-#         obj_name = bbs[i][4]
-#         rect = patches.Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='r', facecolor='none')
-#         ax.add_patch(rect)
-#         ax.text(xmin + 3, ymin, obj_name, bbox=dict(facecolor='yellow', alpha=0.6))
-#     plt.show()
-
-
-# def bbox_vis_example():
-#     # file_img = '../../samples/n02870526_10384.JPEG'
-#     # file_xml = '../../samples/n02870526_10384.xml'
-#     # file_img = '../../samples/n07739125_12.JPEG'
-#     # file_xml = '../../samples/n07739125_12.xml'
-#     file_img = '../../samples/n02773037_9927.JPEG'
-#     file_xml = '../../samples/n02773037_9927.xml'
-#
-#     # list_object_name = ('n02870526', 'n07739125')
-#     visualize_bbox(file_img, file_xml)
-
-
-def generate_img_bbox(annotation_path='/data/hav16/imagenet/Annotation/', dest_file='all_bbox.txt', list_object_names=None):
+def generate_img_bbox(annotation_path='/data/hav16/imagenet/Annotation/', dest_file='all_bbox.txt', class_name_dict={}):
     with open(dest_file, mode='w') as res_file:
         for d in os.listdir(annotation_path):
             folder_path = annotation_path + '/' + d
             xml_files = [f for f in os.listdir(folder_path) if f.endswith('.xml')]
             for xml_f in xml_files:
-                string_info = process_xml_annotation(folder_path + '/' + xml_f, list_object_names)
+                string_info = process_xml_annotation(folder_path + '/' + xml_f, class_name_dict)
+                # print(string_info)
                 if string_info != '':
                     res_file.write(string_info)
 
@@ -201,20 +154,11 @@ def clean_data(path_to_all_imgs, bbox_info_file, clean_bbox_info_file):
     write_clean_img_bbox(path_to_all_imgs, bbox_info_file, clean_bbox_info_file)
 
 
-def get_list_obj_names(class_name_file='class_name.txt'):
-    id_to_name = {}
+def get_class_name_dict(class_name_file='class_name.txt'):
+    class_name_dict = {}
     with open(class_name_file) as f:
         for line in f:
-            pair = line.split(' ')
-            id_to_name[pair[0]] = pair[1]
-    list_obj_names = list(id_to_name.keys())
-    return list_obj_names
-
-if __name__ == '__main__':
-    # bbox_vis_example()
-    # generate_img_bbox(list_object_names=get_list_obj_names())
-    # remove_no_bbox_imgs(list_img, path_to_imgs)
-    # find_lacking_imgs(list_img, path_to_imgs)
-    # write_clean_img_bbox()
-    # test_write_file()
-    _clean_data()
+            line = line.replace('\r', '').replace('\n', '')
+            pair = line.split(',')
+            class_name_dict[pair[0]] = pair[1]
+    return class_name_dict

@@ -1,9 +1,8 @@
-#!/bin/sh
+#!/bin/sh -x
 # get raw data and clean it
 # put -x next to #!/bin/sh to debug
 
-#data_path=/data/hav16/imagenet
-data_path=/data/hav16/test
+data_path=/data/hav16/imagenet
 data_path_raw=/data/hav16/raw
 data_path_clean=/data/hav16/clean
 file_path=${data_path_raw}/imagenet.zip
@@ -44,9 +43,13 @@ do
 done
 cd - > /dev/null
 
-python clean_data.py "$data_path"
+cur_dir=`dirname "$(readlink -f $0)"`
+
+python $cur_dir/clean_data.py "$data_path"
 
 cd $data_path > /dev/null
-rm -rf Annotation/
+echo "zipping clean data to clean path"
 zip -qr $clean_file_path .
+du -h $clean_file_path
+echo "all done"
 cd - > /dev/null
