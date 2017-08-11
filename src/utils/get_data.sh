@@ -1,37 +1,52 @@
 #!/bin/sh
-# get raw data (user should not run this file)
+# get raw data and clean it
+# put -x next to #!/bin/sh to debug
 
-DATA_PATH=/data/hav16/imagenet
-FILE_PATH=${DATA_PATH}/imagenet.zip
-if [ ! -d "$DATA_PATH" ]
+#data_path=/data/hav16/imagenet
+data_path=/data/hav16/test
+data_path_raw=/data/hav16/raw
+data_path_clean=/data/hav16/clean
+file_path=${data_path_raw}/imagenet.zip
+clean_file_path=${data_path_clean}/clean_imagenet.zip
+
+mkdir -p $data_path
+chmod 700 $data_path
+mkdir -p $data_path_raw
+chmod 700 $data_path_raw
+mkdir -p $data_path_clean
+chmod 700 $data_path_clean
+
+if [ ! -f "$file_path" ]
 then
-    mkdir -p $DATA_PATH
-    chmod 700 $DATA_PATH
-fi
-
-
-if [ ! -f "$FILE_PATH" ]
-then
-    wget -O ${FILE_PATH} https://www.dropbox.com/s/dz6kjgmlanju1pr/imagenet.zip?dl=0
+    wget -O ${file_path} https://www.dropbox.com/s/dz6kjgmlanju1pr/imagenet.zip?dl=0
 fi
 
 # old file is .tar.gz
-# tar -xzf $FILE_PATH -C $DATA_PATH
+# tar -xzf $file_path -C $data_path
 
 # current file is compressed in zip format
-unzip $FILE_PATH -d $DATA_PATH
+# -o to force overwrite
+unzip -o $file_path -d $data_path
 
 
-cd $DATA_PATH
+cd $data_path > /dev/null
 
-for TARZ_FILE in *.tar.gz 
+for tarz_file in *.tar.gz
 do
- 	tar -xzf $TARZ_FILE 
+ 	tar -xzf $tarz_file
+ 	rm $tarz_file # remove compressed file when done
 done
 
-for TAR_FILE in *.tar 
-do 
-	tar -xf $TAR_FILE 
+for tar_file in *.tar
+do
+	tar -xf $tar_file
+	rm $tar_file  # remove compressed file when done
 done
+cd - > /dev/null
 
-cd -
+python clean_data.py "$data_path"
+
+cd $data_path > /dev/null
+rm -rf Annotation/
+zip -qr $clean_file_path .
+cd - > /dev/null

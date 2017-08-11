@@ -3,9 +3,9 @@ This file helps to preprocess images from imagenet with bounding box
 """
 
 import xml.etree.ElementTree as ET
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from scipy.misc import imread, imresize, imsave, imshow
+# import matplotlib.pyplot as plt
+# import matplotlib.patches as patches
+# from scipy.misc import imread, imresize, imsave, imshow
 import os
 
 
@@ -113,33 +113,33 @@ def test_write_file():
                 f.write(string_info)
 
 
-def visualize_bbox(file_img, file_xml, list_object_name=None):
-    bbs = string_to_bbox(process_xml_annotation(file_xml, list_object_name))
-    img = imread(file_img)
-    fig, ax = plt.subplots()
-    ax.imshow(img)
-    for i in range(len(bbs)):
-        xmin = bbs[i][0]
-        ymin = bbs[i][1]
-        xmax = bbs[i][2]
-        ymax = bbs[i][3]
-        obj_name = bbs[i][4]
-        rect = patches.Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='r', facecolor='none')
-        ax.add_patch(rect)
-        ax.text(xmin + 3, ymin, obj_name, bbox=dict(facecolor='yellow', alpha=0.6))
-    plt.show()
+# def visualize_bbox(file_img, file_xml, list_object_name=None):
+#     bbs = string_to_bbox(process_xml_annotation(file_xml, list_object_name))
+#     img = imread(file_img)
+#     fig, ax = plt.subplots()
+#     ax.imshow(img)
+#     for i in range(len(bbs)):
+#         xmin = bbs[i][0]
+#         ymin = bbs[i][1]
+#         xmax = bbs[i][2]
+#         ymax = bbs[i][3]
+#         obj_name = bbs[i][4]
+#         rect = patches.Rectangle((xmin, ymin), xmax-xmin, ymax-ymin, linewidth=1, edgecolor='r', facecolor='none')
+#         ax.add_patch(rect)
+#         ax.text(xmin + 3, ymin, obj_name, bbox=dict(facecolor='yellow', alpha=0.6))
+#     plt.show()
 
 
-def bbox_vis_example():
-    # file_img = '../../samples/n02870526_10384.JPEG'
-    # file_xml = '../../samples/n02870526_10384.xml'
-    # file_img = '../../samples/n07739125_12.JPEG'
-    # file_xml = '../../samples/n07739125_12.xml'
-    file_img = '../../samples/n02773037_9927.JPEG'
-    file_xml = '../../samples/n02773037_9927.xml'
-
-    # list_object_name = ('n02870526', 'n07739125')
-    visualize_bbox(file_img, file_xml)
+# def bbox_vis_example():
+#     # file_img = '../../samples/n02870526_10384.JPEG'
+#     # file_xml = '../../samples/n02870526_10384.xml'
+#     # file_img = '../../samples/n07739125_12.JPEG'
+#     # file_xml = '../../samples/n07739125_12.xml'
+#     file_img = '../../samples/n02773037_9927.JPEG'
+#     file_xml = '../../samples/n02773037_9927.xml'
+#
+#     # list_object_name = ('n02870526', 'n07739125')
+#     visualize_bbox(file_img, file_xml)
 
 
 def generate_img_bbox(annotation_path='/data/hav16/imagenet/Annotation/', dest_file='all_bbox.txt', list_object_names=None):
@@ -194,17 +194,16 @@ def write_clean_img_bbox(path_to_all_imgs, bbox_info_file='all_bbox.txt', clean_
                         clean_file.write(line)
 
 
-def _clean_data():
-    path_to_all = '/data/hav16/imagenet/'
+def clean_data(path_to_all_imgs, bbox_info_file, clean_bbox_info_file):
     print('removing images without bbox')
-    remove_no_bbox_imgs(path_to_all)
+    remove_no_bbox_imgs(path_to_all_imgs, bbox_info_file)
     print('write clean bbox info file')
-    write_clean_img_bbox(path_to_all)
+    write_clean_img_bbox(path_to_all_imgs, bbox_info_file, clean_bbox_info_file)
 
 
-def get_list_obj_names():
+def get_list_obj_names(class_name_file='class_name.txt'):
     id_to_name = {}
-    with open('class_name.txt') as f:
+    with open(class_name_file) as f:
         for line in f:
             pair = line.split(' ')
             id_to_name[pair[0]] = pair[1]
