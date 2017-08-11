@@ -155,46 +155,51 @@ def generate_img_bbox(annotation_path='/data/hav16/imagenet/Annotation/', dest_f
     print(set_other_idx)
 
 
-def get_list_img(file_img_bbox='img_bbox.txt'):
-    list_img = []
-    with open(file_img_bbox) as f:
+def get_imgs_having_bbox(bbox_info_file):
+    list_img = set()
+    with open(bbox_info_file) as f:
         for line in f:
             if line != '':
                 img_name = line.split(',')[0]
-                list_img.append(img_name)
-    return list_img
+                list_img.add(img_name)
+    return list(list_img)
 
 
-def remove_no_bbox_imgs(list_img, path_to_imgs):
-    """note that there are a lot of images without bbox -> remove"""
+def remove_no_bbox_imgs(path_to_all_imgs, bbox_info_file='all_bbox.txt'):
+    """note that there are a lot of images without bbox -> remove them"""
     # first find all images in path_to_imgs:
-    all_img_files = [e for e in os.listdir(path_to_imgs) if e.endswith('.JPEG')]
+    all_img_files = [e for e in os.listdir(path_to_all_imgs) if e.endswith('.JPEG')]
+    imgs_with_bbox = get_imgs_having_bbox(bbox_info_file)
     for e in all_img_files:
-        if e not in list_img:
-            os.remove(path_to_imgs + '/' + e)
+        if e not in imgs_with_bbox:
+            os.remove(path_to_all_imgs + '/' + e)
 
 
-def find_lacking_imgs(list_img, path_to_imgs):
-    all_img_files = [e for e in os.listdir(path_to_imgs) if e.endswith('.JPEG')]
-    cnt = 0
+def write_clean_img_bbox(path_to_all_imgs, bbox_info_file='all_bbox.txt', clean_bbox_info_file='clean_bbox.txt'):
+    """note that there are lacking images, some annotated images are not found in .tar file"""
+    all_img_files = [e for e in os.listdir(path_to_all_imgs) if e.endswith('.JPEG')]
+    # first find all lacking images
     lacking_imgs = []
-    for e in list_img:
+    imgs_having_bbox = get_imgs_having_bbox(bbox_info_file)
+    for e in imgs_having_bbox:
         if e not in all_img_files:
             lacking_imgs.append(e)
-            cnt += 1
-    print("lacking %d images" % cnt)
-    return lacking_imgs
-
-
-def write_clean_img_bbox(file_img_bbox='img_bbox.txt'):
-    lacking_imgs = find_lacking_imgs(get_list_img(file_img_bbox), '/vol/bitbucket/hav16/imagenet')
-    with open('clean_img_bbox.txt', mode='w') as clean_file:
-        with open(file_img_bbox) as f:
-            for line in f:
+    # write clean bbox info file
+    with open(clean_bbox_info_file, mode='w') as clean_file:
+        with open(bbox_info_file) as all_file:
+            for line in all_file:
                 if line != '':
                     img_name = line.split(',')[0]
                     if img_name not in lacking_imgs:
                         clean_file.write(line)
+
+
+def _clean_data():
+    path_to_all = '/data/hav16/imagenet/'
+    print('removing images without bbox')
+    remove_no_bbox_imgs(path_to_all)
+    print('write clean bbox info file')
+    write_clean_img_bbox(path_to_all)
 
 
 def get_list_obj_names():
@@ -205,11 +210,12 @@ def get_list_obj_names():
             id_to_name[pair[0]] = pair[1]
     list_obj_names = list(id_to_name.keys())
     return list_obj_names
-
+cle
 if __name__ == '__main__':
     # bbox_vis_example()
-    generate_img_bbox(list_object_names=get_list_obj_names())
+    # generate_img_bbox(list_object_names=get_list_obj_names())
     # remove_no_bbox_imgs(list_img, path_to_imgs)
     # find_lacking_imgs(list_img, path_to_imgs)
     # write_clean_img_bbox()
     # test_write_file()
+    _clean_data()
