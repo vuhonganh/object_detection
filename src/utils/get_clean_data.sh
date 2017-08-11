@@ -1,16 +1,18 @@
 #!/bin/sh
-DATA_PATH=/vol/bitbucket/hav16/imagenet
-FILE_PATH=${DATA_PATH}/imagenet_clean.zip
-if [ ! -d "$DATA_PATH" ]
+data_path=/data/hav16/imagenet
+clean_data_path=/data/hav16/clean
+clean_file_path=${clean_data_path}/imagenet_clean.zip
+
+if [ ! -d "$data_path" ]
 then
-    mkdir -p $DATA_PATH
-    chmod 700 $DATA_PATH
+    mkdir -p $data_path
+    chmod 700 $data_path
 fi
 
 
-if [ ! -f "$FILE_PATH" ]
+if [ ! -f "$clean_file_path" ]
 then
-    wget -O ${FILE_PATH} https://www.dropbox.com/s/ijtoc7ra4gwqc7u/imagenet_clean.zip?dl=0
+    wget -O ${clean_file_path} https://www.dropbox.com/s/39e7kbukhgltd9t/clean_imagenet.zip?dl=0
 fi
 
-unzip $FILE_PATH -d $DATA_PATH
+unzip $clean_file_path -d $data_path
