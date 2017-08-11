@@ -210,7 +210,7 @@ def get_list_obj_names():
             id_to_name[pair[0]] = pair[1]
     list_obj_names = list(id_to_name.keys())
     return list_obj_names
-cle
+
 if __name__ == '__main__':
     # bbox_vis_example()
     # generate_img_bbox(list_object_names=get_list_obj_names())
