@@ -2,9 +2,12 @@
 some code is based on Yhenon's implementation
 '''
 from bbox_helper import get_bbox_list_resized
+import numpy as np
+
 
 # Note that bbox represented by xmin, ymin, xmax, ymax
 # use list instead of dict for faster comptutation -> bb_list has form xmin, ymin, xmax, ymax
+
 
 def area(bb):
     return (bb[2] - bb[0]) * (bb[3] - bb[1])
@@ -62,7 +65,15 @@ def compute_rpn_of_img(img_info, config, width, height, resized_width, resized_h
 
     # step 0.2: prepare data from img_info
     n_bbs = len(img_info['bbox'])  # number of bboxes in this image
+    best_iou_for_bb = np.zeros(n_bbs, dtype=np.float32)
 
+    best_anchor_for_bb = -1 * np.ones((n_bbs, 4), dtype=np.int32)
+
+    best_corner_for_bb = np.ones((n_bbs, 4), dtype=np.int32)
+
+    best_param_for_bb = np.ones((n_bbs, 4), dtype=np.float32)
+
+    num_anchor_for_bb = np.zeros(n_bbs, dtype=np.int32)
 
     # step 0.3: resize bbox:
     ground_truth_bb_list = get_bbox_list_resized(img_info['bbox'], width, height, resized_width, resized_height)
@@ -90,6 +101,12 @@ def compute_rpn_of_img(img_info, config, width, height, resized_width, resized_h
                     anchor_ymax = down_scale * (feat_y + 0.5) + (anchor_height / 2)
                     if anchor_ymin < 0 or anchor_ymax > resized_height:
                         continue
+                    # now this is a valid anchor, by default set its type to negative
+                    anchor_type = 'negative'
+
+                    best_iou_for_loc = 0.0  # for current location on feat map + current anchor configuration
+                    # different from best IOU for a ground truth box
+
                     for bb_idx in range(n_bbs):
                         # compute iou of the current ground truth box vs the current anchor box
                         # current ground truth bbox
@@ -97,6 +114,40 @@ def compute_rpn_of_img(img_info, config, width, height, resized_width, resized_h
                                   ground_truth_bb_list[bb_idx]['xmax'], ground_truth_bb_list[bb_idx]['ymax']]
                         cur_anchor = [anchor_xmin, anchor_ymin, anchor_xmax, anchor_ymax]
                         cur_iou = iou(cur_gt, cur_anchor)
-                        
+                        if cur_iou > best_iou_for_bb[bb_idx] or cur_iou > config.upper_bound_iou:
+                            # implement second part of equation 2 in Faster-RCNN paper
+                            gt_center_x = 0.5 * (cur_gt[0] + cur_gt[2])
+                            gt_center_y = 0.5 * (cur_gt[1] + cur_gt[3])
+                            anchor_center_x = 0.5 * (cur_anchor[0] + cur_anchor[2])
+                            anchor_center_y = 0.5 * (cur_anchor[1] + cur_anchor[3])
+
+                            tx_star = (gt_center_x - anchor_center_x) / anchor_width
+                            ty_star = (gt_center_y - anchor_center_y) / anchor_height
+                            tw_star = np.log((cur_gt[2] - cur_gt[0]) / anchor_width)
+                            th_star = np.log((cur_gt[3] - cur_gt[1]) / anchor_height)
+
+                            # anchor is considered positive only when it's > upper bound
+                            if cur_iou > config.upper_bound_iou:
+                                anchor_type = 'positive'
+                                num_anchor_for_bb[bb_idx] += 1
+                                if cur_iou > best_iou_for_loc:
+                                    best_iou_for_loc = cur_iou
+                                    best_regression = (tx_star, ty_star, tw_star, th_star)
+
+                            if config.lower_bound_iou < cur_iou < config.upper_bound_iou:
+                                anchor_type = 'neutral'  # will not participate to objective
+
+                            if cur_iou > best_iou_for_bb[bb_idx]:
+                                best_anchor_for_bb[bb_idx] = [feat_y, feat_x, anchor_ratio_idx, anchor_size_idx]
+                                best_iou_for_bb[bb_idx] = cur_iou
+                                best_corner_for_bb[bb_idx] = [anchor_xmin, anchor_xmax, anchor_ymin, anchor_ymax]
+                                best_param_for_bb[bb_idx] = [tx_star, ty_star, tw_star, th_star]
+
+
+
+
+
+
+
 
 
