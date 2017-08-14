@@ -68,10 +68,10 @@ def show_img_with_bbox(img, bbox_list):
     fig, ax = plt.subplots()
     ax.imshow(img)
     for i in range(len(bbox_list)):
-        xmin = int(bbox_list[i]['xmin'])
-        xmax = int(bbox_list[i]['xmax'])
-        ymin = int(bbox_list[i]['ymin'])
-        ymax = int(bbox_list[i]['ymax'])
+        xmin = bbox_list[i]['xmin']
+        xmax = bbox_list[i]['xmax']
+        ymin = bbox_list[i]['ymin']
+        ymax = bbox_list[i]['ymax']
         obj_name = bbox_list[i]['class']
         rect = patches.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin, linewidth=1, edgecolor='r', facecolor='none')
         ax.add_patch(rect)
@@ -84,10 +84,10 @@ def get_hflip_img(img, bbox_list):
     img_flip = np.fliplr(img)
     new_bbox_list = []
     for i in range(len(bbox_list)):
-        ymin = int(bbox_list[i]['ymin'])
-        ymax = int(bbox_list[i]['ymax'])
-        xmax = width - int(bbox_list[i]['xmin'])
-        xmin = width - int(bbox_list[i]['xmax'])
+        ymin = bbox_list[i]['ymin']
+        ymax = bbox_list[i]['ymax']
+        xmax = width - bbox_list[i]['xmin']
+        xmin = width - bbox_list[i]['xmax']
         new_bbox_list.append({'class': bbox_list[i]['class'], 'xmin': xmin, 'ymin': ymin, 'xmax': xmax, 'ymax': ymax})
     return img_flip, new_bbox_list
 
@@ -100,10 +100,10 @@ def get_scaled_img(img, bbox_list, new_width_r, new_height_r):
     img_resized = imresize(img, (new_height, new_width))
     new_bbox_list = []
     for i in range(len(bbox_list)):
-        new_xmin = int(int(bbox_list[i]['xmin']) * new_width_r)
-        new_xmax = int(int(bbox_list[i]['xmax']) * new_width_r)
-        new_ymin = int(int(bbox_list[i]['ymin']) * new_height_r)
-        new_ymax = int(int(bbox_list[i]['ymax']) * new_height_r)
+        new_xmin = int(bbox_list[i]['xmin'] * new_width_r)
+        new_xmax = int(bbox_list[i]['xmax'] * new_width_r)
+        new_ymin = int(bbox_list[i]['ymin'] * new_height_r)
+        new_ymax = int(bbox_list[i]['ymax'] * new_height_r)
         cur = {'class': bbox_list[i]['class'], 'xmin': new_xmin, 'xmax': new_xmax, 'ymin': new_ymin, 'ymax': new_ymax}
         new_bbox_list.append(cur)
     return img_resized, new_bbox_list
