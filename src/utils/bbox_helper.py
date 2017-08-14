@@ -44,6 +44,9 @@ def bbox_parser(bbox_info_file, data_dir_path='/data/hav16/imagenet/'):
 
             all_info[file_name]['bbox'].append({'class': class_name, 'xmin': int(info_list[3]), 'ymin': int(info_list[4]),
                                                   'xmax': int(info_list[5]), 'ymax': int(info_list[6])})
+    # add background 'bg' in class_to_idx:
+    class_to_idx['bg'] = len(class_to_idx)
+
     return list(all_info.values()), nb_img_per_class, class_to_idx
 
 
@@ -53,7 +56,6 @@ def random_visualize_bbox_img(list_all_info, idx_to_show=None, show_hflip=False,
     im = imread(list_all_info[idx_to_show]['file_path'])
     bb = list_all_info[idx_to_show]['bbox']
     show_img_with_bbox(im, bb)
-    imr, bbr, imf, bbf = None, None, None, None
     if new_height_r != 1.0 or new_width_r != 1.0:
         imr, bbr = get_scaled_img(im, bb, new_width_r, new_height_r)
         show_img_with_bbox(imr, bbr)
