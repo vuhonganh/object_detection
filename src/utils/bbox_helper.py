@@ -75,7 +75,8 @@ def show_img_with_bbox(img, bbox_list):
         obj_name = bbox_list[i]['class']
         rect = patches.Rectangle((xmin, ymin), xmax - xmin, ymax - ymin, linewidth=1, edgecolor='r', facecolor='none')
         ax.add_patch(rect)
-        ax.text(xmin+1, ymin, obj_name, color='black', bbox=dict(facecolor='white', alpha=0.5))
+        # ax.text(xmin+1, ymin, obj_name, color='black', bbox=dict(facecolor='white', alpha=0.5))
+        ax.text(xmin, ymin - 5, obj_name, color='yellow')
     plt.show(block=False)
 
 
@@ -92,13 +93,10 @@ def get_hflip_img(img, bbox_list):
     return img_flip, new_bbox_list
 
 
-def get_scaled_img(img, bbox_list, new_width_r, new_height_r):
-    height, width, n_channel = img.shape  # suppose img is loaded in this format, note n_row is height
-    new_height = int(height * new_height_r)
-    new_width = int(width * new_width_r)
-
-    img_resized = imresize(img, (new_height, new_width))
+def get_bbox_list_resized(bbox_list, width, height, resized_width, resized_height):
     new_bbox_list = []
+    new_width_r = float(resized_width) / width
+    new_height_r = float(resized_height) / height
     for i in range(len(bbox_list)):
         new_xmin = int(bbox_list[i]['xmin'] * new_width_r)
         new_xmax = int(bbox_list[i]['xmax'] * new_width_r)
@@ -106,6 +104,16 @@ def get_scaled_img(img, bbox_list, new_width_r, new_height_r):
         new_ymax = int(bbox_list[i]['ymax'] * new_height_r)
         cur = {'class': bbox_list[i]['class'], 'xmin': new_xmin, 'xmax': new_xmax, 'ymin': new_ymin, 'ymax': new_ymax}
         new_bbox_list.append(cur)
+    return new_bbox_list
+
+
+def get_scaled_img(img, bbox_list, new_width_r, new_height_r):
+    height, width, n_channel = img.shape  # suppose img is loaded in this format, note n_row is height
+    new_height = int(height * new_height_r)
+    new_width = int(width * new_width_r)
+
+    img_resized = imresize(img, (new_height, new_width))
+    new_bbox_list = get_bbox_list_resized(bbox_list, width, height, new_width, new_height)
     return img_resized, new_bbox_list
 
 
