@@ -64,7 +64,15 @@ def random_visualize_bbox_img(list_all_info, idx_to_show=None, show_hflip=False,
         show_img_with_bbox(imf, bbf)
     plt.show()
 
-def show_img_with_bbox(img, bbox_list):
+
+def show_img_from_file(file_path, bbox_list, resized_width=None, resized_height=None, blocking=True):
+    img = imread(file_path)
+    if resized_width is not None and resized_height is not None:
+        img = imresize(img, (resized_height, resized_width))
+    show_img_with_bbox(img, bbox_list, blocking)
+
+
+def show_img_with_bbox(img, bbox_list, blocking=False):
     fig, ax = plt.subplots()
     ax.imshow(img)
     for i in range(len(bbox_list)):
@@ -77,7 +85,7 @@ def show_img_with_bbox(img, bbox_list):
         ax.add_patch(rect)
         # ax.text(xmin+1, ymin, obj_name, color='black', bbox=dict(facecolor='white', alpha=0.5))
         ax.text(xmin, ymin - 5, obj_name, color='yellow')
-    plt.show(block=False)
+    plt.show(block=blocking)
 
 
 def get_hflip_img(img, bbox_list):
