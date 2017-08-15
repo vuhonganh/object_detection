@@ -12,7 +12,7 @@ classification and tightened bounding boxes.
 from bbox_helper import get_bbox_list_resized, bbox_parser, random_visualize_bbox_img, show_img_with_bbox, show_img_from_file
 import numpy as np
 import random
-
+np.set_printoptions(threshold=np.inf)  # set this to force numpy to fully print
 
 # Note that bbox represented by xmin, ymin, xmax, ymax
 # use list instead of dict for faster comptutation -> bb_list has form xmin, ymin, xmax, ymax
@@ -241,6 +241,13 @@ def compute_rpn_of_img(img_info, config, width, height, resized_width, resized_h
 
     y_rpn_class = np.concatenate([y_is_box_valid, y_rpn_overlap], axis=1)
     y_rpn_regr = np.concatenate([np.repeat(y_rpn_overlap, 4, axis=1), y_rpn_regr], axis=1)
+    print(np.repeat(y_rpn_overlap, 4, axis=1))
+    # y_rpn_class: 1, 2 * nb_anchors, feat_height, feat_width
+    # y_rpn_regr: 1, 8 * nb_anchors, feat_height, feat_width
+    # TODO: check why stack like this?
+
+    # print(y_is_box_valid)
+    # print(y_is_box_valid.shape)
 
     return y_rpn_class, y_rpn_regr
 
@@ -276,7 +283,7 @@ def get_all_anchor(resized_img_width, resized_img_height, config):
 
 
 if __name__ == '__main__':
-
+    print(compute_feat_size_resnet(600, 600))
     im_w, im_h = 500, 500
     config = {'down_scale': 16, 'anchor_sizes': [64, 128, 256], 'anchor_ratios': [[1, 1], [1, 2], [2, 1], [2, 2]],
               'upper_bound_iou': 0.65, 'lower_bound_iou': 0.3}
@@ -301,9 +308,12 @@ if __name__ == '__main__':
     all_infos, _, _ = bbox_parser('/data/hav16/imagenet/clean_bbox.txt')
     img_info = all_infos[0]
     print(img_info)
-    show_img_from_file('/data/hav16/imagenet/n07753592_11949.JPEG', all_bbs, resized_width, resized_height)
+    # show_img_from_file('/data/hav16/imagenet/n07753592_11949.JPEG', all_bbs, resized_width, resized_height)
     # img_width = img_info['width']
     # img_height = img_info['height']
 
     # random_visualize_bbox_img(all_infos, 0)
     y_class, y_regr = compute_rpn_of_img(img_info, config, im_w, im_h, resized_width, resized_height, compute_feat_size_resnet)
+    print(y_class.shape)
+    print(y_regr.shape)
+    # print(y_regr)
