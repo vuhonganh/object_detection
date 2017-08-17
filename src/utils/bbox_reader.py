@@ -8,6 +8,7 @@ import os
 
 set_other_idx = set()
 
+
 def _get_int(name, root, box_idx=0):
     """ find item with that name in the box with that box_idx then return its value in int"""
     cur_idx = 0
@@ -34,7 +35,7 @@ def box_is_valid(xmin, ymin, xmax, ymax, width, height):
     return False
 
 
-def process_xml_annotation(xml_file, class_name_dict):
+def process_xml_annotation(xml_file, class_name_dict, include_width_height=True, prefix_path=None):
     """Find all bbox that contains the object by matching object_name. 
     Note that an annotation folder can contain xml files of different folder name
     and multiple objects    
@@ -46,6 +47,11 @@ def process_xml_annotation(xml_file, class_name_dict):
     root = tree.getroot()
     folder_name = root.findtext('folder')
     img_file_name = root.findtext('filename') + '.JPEG'
+    if prefix_path is not None:
+        if prefix_path[-1] != '/':
+            prefix_path += '/'
+        img_file_name = prefix_path + img_file_name
+
     img_width = float(root.find('size').find('width').text)
     img_height = float(root.find('size').find('height').text)
 
@@ -65,20 +71,23 @@ def process_xml_annotation(xml_file, class_name_dict):
                 bbs.append([xmin, ymin, xmax, ymax])
                 if cur_obj in class_name_dict:
                     cur_obj = class_name_dict[cur_obj]  # change wnid to english name
-                string_res += '%s,%d,%d,%d,%d,%d,%d,%s\n' % (img_file_name, img_width, img_height, xmin, ymin, xmax, ymax, cur_obj)
+                    if include_width_height:
+                        string_res += '%s,%d,%d,%d,%d,%d,%d,%s\n' % (img_file_name, img_width, img_height, xmin, ymin, xmax, ymax, cur_obj)
+                    else:
+                        string_res += '%s,%d,%d,%d,%d,%s\n' % (img_file_name, xmin, ymin, xmax, ymax, cur_obj)
                 if len(class_name_dict) > 0 and folder_name not in class_name_dict:
                     set_other_idx.add(folder_name)
     return string_res
 
 
-def process_folder_xml(folder_path, dest_file, class_name_dict):
+def process_folder_xml(folder_path, dest_file, class_name_dict, include_width_height=True, prefix_path=None):
     """extract bbox info from all xml files in the folder_path and write to dest_file.
     If list_object_names is provided (i.e. not None) then only bboxes containing one of those objects are extracted.
     bbox info has format: img_file_name,im_width,im_height,xmin,ymin,xmax,ymax,object_name"""
     xml_files = [f for f in os.listdir(folder_path) if f.endswith('.xml')]
     with open(dest_file, mode='w') as f:
         for xml_f in xml_files:
-            string_info = process_xml_annotation(folder_path + '/' + xml_f, class_name_dict)
+            string_info = process_xml_annotation(folder_path + '/' + xml_f, class_name_dict, include_width_height, prefix_path)
             if string_info != '':
                 f.write(string_info)
 
@@ -94,13 +103,15 @@ def test_write_file():
                 f.write(string_info)
 
 
-def generate_img_bbox(annotation_path='/data/hav16/imagenet/Annotation/', dest_file='all_bbox.txt', class_name_dict={}):
+def generate_img_bbox(annotation_path='/data/hav16/imagenet/Annotation/', dest_file='all_bbox.txt', class_name_dict={}, include_width_height=True, prefix_path=None):
     with open(dest_file, mode='w') as res_file:
-        for d in os.listdir(annotation_path):
+        dirs = sorted(os.listdir(annotation_path))
+        for d in dirs:
             folder_path = annotation_path + '/' + d
             xml_files = [f for f in os.listdir(folder_path) if f.endswith('.xml')]
+            xml_files = sorted(xml_files)
             for xml_f in xml_files:
-                string_info = process_xml_annotation(folder_path + '/' + xml_f, class_name_dict)
+                string_info = process_xml_annotation(folder_path + '/' + xml_f, class_name_dict, include_width_height, prefix_path)
                 # print(string_info)
                 if string_info != '':
                     res_file.write(string_info)
@@ -121,7 +132,9 @@ def get_imgs_having_bbox(bbox_info_file):
 def remove_no_bbox_imgs(path_to_all_imgs, bbox_info_file='all_bbox.txt'):
     """note that there are a lot of images without bbox -> remove them"""
     # first find all images in path_to_imgs:
-    all_img_files = [e for e in os.listdir(path_to_all_imgs) if e.endswith('.JPEG')]
+    if path_to_all_imgs[-1] != '/':
+        path_to_all_imgs += '/'
+    all_img_files = ['%s%s' % (path_to_all_imgs, e) for e in os.listdir(path_to_all_imgs) if e.endswith('.JPEG')]
     imgs_with_bbox = get_imgs_having_bbox(bbox_info_file)
     for e in all_img_files:
         if e not in imgs_with_bbox:
@@ -130,7 +143,10 @@ def remove_no_bbox_imgs(path_to_all_imgs, bbox_info_file='all_bbox.txt'):
 
 def write_clean_img_bbox(path_to_all_imgs, bbox_info_file='all_bbox.txt', clean_bbox_info_file='clean_bbox.txt'):
     """note that there are lacking images, some annotated images are not found in .tar file"""
-    all_img_files = [e for e in os.listdir(path_to_all_imgs) if e.endswith('.JPEG')]
+    if path_to_all_imgs[-1] != '/':
+        path_to_all_imgs += '/'
+    all_img_files = ['%s%s' % (path_to_all_imgs, e) for e in os.listdir(path_to_all_imgs) if e.endswith('.JPEG')]
+    print(all_img_files[0])
     # first find all lacking images
     lacking_imgs = []
     imgs_having_bbox = get_imgs_having_bbox(bbox_info_file)
@@ -145,6 +161,22 @@ def write_clean_img_bbox(path_to_all_imgs, bbox_info_file='all_bbox.txt', clean_
                     img_name = line.split(',')[0]
                     if img_name not in lacking_imgs:
                         clean_file.write(line)
+
+
+def split_trainval_test(clean_bbox_info_file, trainval_file, test_file):
+    """split from clean bbox file into 2 files with 9:1 ratio"""
+    cnt = 0
+    with open(clean_bbox_info_file, mode='r') as f:
+        with open(trainval_file, mode='w') as train_val_f:
+            with open(test_file, mode='w') as test_f:
+                for line in f:
+                    if line != '':
+                        cnt += 1
+                        if cnt == 10:
+                            cnt = 0
+                            test_f.write(line)
+                        else:
+                            train_val_f.write(line)
 
 
 def clean_data(path_to_all_imgs, bbox_info_file, clean_bbox_info_file):
@@ -162,3 +194,14 @@ def get_class_name_dict(class_name_file='class_name.txt'):
             pair = line.split(',')
             class_name_dict[pair[0]] = pair[1]
     return class_name_dict
+
+
+if __name__ == '__main__':
+    dict_wnid_name = get_class_name_dict('class_name.txt')
+    data_path = '/data/hav16/imagenet/'
+    annot_path = data_path + '/Annotation/'
+    dest_file = 'all_bbox_v2.txt'
+    dest_clean_file = 'clean_bbox_v2.txt'
+    # generate_img_bbox(annot_path, dest_file, dict_wnid_name, include_width_height=False, prefix_path=data_path)
+    # clean_data(data_path, dest_file, dest_clean_file)
+    split_trainval_test('clean_bbox_v2.txt', 'train_val.txt', 'test.txt')

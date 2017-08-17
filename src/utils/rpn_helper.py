@@ -308,7 +308,7 @@ if __name__ == '__main__':
     all_infos, _, _ = bbox_parser('/data/hav16/imagenet/clean_bbox.txt')
     img_info = all_infos[0]
     print(img_info)
-    # show_img_from_file('/data/hav16/imagenet/n07753592_11949.JPEG', all_bbs, resized_width, resized_height)
+    show_img_from_file('/data/hav16/imagenet/n07753592_11949.JPEG', all_bbs, resized_width, resized_height)
     # img_width = img_info['width']
     # img_height = img_info['height']
 
